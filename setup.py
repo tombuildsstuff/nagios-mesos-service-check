@@ -9,7 +9,7 @@ setup(
     name="nagios-mesos-service-check",
     description="A selection of Nagios plugins to monitor services hosted in OpenTable Mesos.",
     long_description=open('README.rst').read(),
-    version="0.1.0",
+    version="0.1.1",
     packages=find_packages(),
     author='Steven Schlansker',
     author_email='sschlansker@opentable.com',
