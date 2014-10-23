@@ -12,9 +12,14 @@ HEALTHY = 1
 UNHEALTHY = -1
 
 class MesosService(nagiosplugin.Resource):
-  def __init__(self, service_uri, metric_name):
+  def __init__(self, name, service_uri, metric_name):
+    self.myname = name
     self.service_uri = service_uri
     self.metric_name = metric_name
+
+  @property
+  def name(self):
+    return self.myname + ' health'
 
   def probe(self):
     try:
@@ -31,8 +36,13 @@ class MesosService(nagiosplugin.Resource):
 
 
 class DiscoveryState(nagiosplugin.Resource):
-  def __init__(self, announcements):
+  def __init__(self, name, announcements):
+    self.myname = name
     self.announcements = announcements
+
+  @property
+  def name(self):
+    return self.myname + ' announcement'
 
   def probe(self):
     yield nagiosplugin.Metric('announced services', len(self.announcements))
@@ -58,12 +68,12 @@ def main():
   announcements = [a for a in discovery_state if a['serviceType'] == args.service]
 
   check = nagiosplugin.Check(
-              DiscoveryState(announcements),
+              DiscoveryState(args.service, announcements),
               nagiosplugin.ScalarContext('announced services', n_services_range, n_services_range))
 
   for ann in announcements:
     name = 'service %s instance %s' % (ann['serviceType'], ann['serviceUri'])
-    check.add(MesosService(ann['serviceUri'], name),
+    check.add(MesosService(args.service, ann['serviceUri'], name),
               nagiosplugin.ScalarContext(name, unhealthy_range, unhealthy_range))
 
   check.main(verbose=args.verbose)
