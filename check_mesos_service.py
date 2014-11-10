@@ -64,7 +64,11 @@ def main():
   unhealthy_range = nagiosplugin.Range('%d:%d' % (HEALTHY - 1, HEALTHY + 1))
   n_services_range = nagiosplugin.Range('%s:' % (args.instances,))
 
-  discovery_state = requests.get(args.discovery + '/state', timeout=2).json()
+  try:
+    discovery_state = requests.get(args.discovery + '/state', timeout=2).json()
+  except ValueError, e:
+    log.error('ValueError while parsing discovery state: %s', e)
+    discovery_state = []
   announcements = [a for a in discovery_state if a['serviceType'] == args.service]
 
   check = nagiosplugin.Check(
