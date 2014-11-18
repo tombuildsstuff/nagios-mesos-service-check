@@ -10,6 +10,7 @@ log = logging.getLogger("nagiosplugin")
 INFINITY = float('inf')
 HEALTHY = 1
 UNHEALTHY = -1
+TOKEN = "server-token"
 
 class MesosService(nagiosplugin.Resource):
   def __init__(self, name, service_uri, metric_name):
@@ -45,7 +46,22 @@ class DiscoveryState(nagiosplugin.Resource):
     return self.myname + ' announcement'
 
   def probe(self):
-    yield nagiosplugin.Metric('announced services', len(self.announcements))
+    seen = set()
+    count = 0
+    for ann in self.announcements:
+      metadata = ann.get("metadata", dict())
+      if TOKEN in metadata:
+        token = metadata[TOKEN]
+        if token not in seen:
+          seen.add(token)
+          log.debug('New token %s' % token)
+          count += 1
+        else:
+          log.debug('Seen token %s' % token)
+      else:
+        log.debug('No token for service %s' % ann['announcementId'])
+        count += 1
+    yield nagiosplugin.Metric('announced services', count)
 
 @nagiosplugin.guarded
 def main():
@@ -55,14 +71,17 @@ def main():
   argp.add_argument('-s', '--service', required=True,
                     help='The service name to check')
   argp.add_argument('-n', '--instances', default=1,
-                    help='The number of instances to check')
+                    help='Minimum instances before critical')
+  argp.add_argument('-w', '--warn', default=-1,
+                    help='Minimum instances before warn')
   argp.add_argument('-v', '--verbose', action='count', default=0,
                     help='increase output verbosity (use up to 3 times)')
 
   args = argp.parse_args()
 
   unhealthy_range = nagiosplugin.Range('%d:%d' % (HEALTHY - 1, HEALTHY + 1))
-  n_services_range = nagiosplugin.Range('%s:' % (args.instances,))
+  warn_services_range = nagiosplugin.Range('%s:' % (args.warn,))
+  crit_services_range = nagiosplugin.Range('%s:' % (args.instances,))
 
   try:
     discovery_state = requests.get(args.discovery + '/state', timeout=2).json()
@@ -73,7 +92,7 @@ def main():
 
   check = nagiosplugin.Check(
               DiscoveryState(args.service, announcements),
-              nagiosplugin.ScalarContext('announced services', n_services_range, n_services_range))
+              nagiosplugin.ScalarContext('announced services', warn_services_range, crit_services_range))
 
   for ann in announcements:
     name = 'service %s instance %s' % (ann['serviceType'], ann['serviceUri'])
