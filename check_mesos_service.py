@@ -24,7 +24,7 @@ class MesosService(nagiosplugin.Resource):
 
   def probe(self):
     try:
-      response = requests.head(self.service_uri + '/health', timeout=2)
+      response = requests.get(self.service_uri + '/health', timeout=2)
       if not response.status_code in [200, 204]:
         log.error('%s health %s: %s', self.metric_name, response.status_code, response.text)
         yield nagiosplugin.Metric(self.metric_name, UNHEALTHY)
