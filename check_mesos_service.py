@@ -24,7 +24,7 @@ class MesosService(nagiosplugin.Resource):
 
   def probe(self):
     try:
-      response = requests.get(self.service_uri + '/health', timeout=2)
+      response = requests.get(self.service_uri + '/health', timeout=4)
       if not response.status_code in [200, 204]:
         log.error('%s health %s: %s', self.metric_name, response.status_code, response.text)
         yield nagiosplugin.Metric(self.metric_name, UNHEALTHY)
@@ -84,7 +84,7 @@ def main():
   crit_services_range = nagiosplugin.Range('%s:' % (args.instances,))
 
   try:
-    discovery_state = requests.get(args.discovery + '/state', timeout=2).json()
+    discovery_state = requests.get(args.discovery + '/state', timeout=4).json()
   except ValueError, e:
     log.error('ValueError while parsing discovery state: %s', e)
     discovery_state = []
