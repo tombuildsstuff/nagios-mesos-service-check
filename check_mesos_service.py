@@ -4,13 +4,13 @@ import argparse
 import logging
 import re
 import requests
+from discovery_state import DiscoveryState
+
 
 log = logging.getLogger("nagiosplugin")
-
 INFINITY = float('inf')
 HEALTHY = 1
 UNHEALTHY = -1
-TOKEN = "server-token"
 
 class MesosService(nagiosplugin.Resource):
   def __init__(self, name, service_uri, metric_name):
@@ -34,34 +34,6 @@ class MesosService(nagiosplugin.Resource):
     except requests.exceptions.RequestException, e:
       log.error('%s health %s', self.metric_name, e)
       yield nagiosplugin.Metric(self.metric_name, UNHEALTHY)
-
-
-class DiscoveryState(nagiosplugin.Resource):
-  def __init__(self, name, announcements):
-    self.myname = name
-    self.announcements = announcements
-
-  @property
-  def name(self):
-    return self.myname + ' announcement'
-
-  def probe(self):
-    seen = set()
-    count = 0
-    for ann in self.announcements:
-      metadata = ann.get("metadata", dict())
-      if TOKEN in metadata:
-        token = metadata[TOKEN]
-        if token not in seen:
-          seen.add(token)
-          log.debug('New token %s' % token)
-          count += 1
-        else:
-          log.debug('Seen token %s' % token)
-      else:
-        log.debug('No token for service %s' % ann['announcementId'])
-        count += 1
-    yield nagiosplugin.Metric('announced services', count)
 
 @nagiosplugin.guarded
 def main():
