@@ -14,7 +14,7 @@ setup(
     author='Steven Schlansker',
     author_email='sschlansker@opentable.com',
     url="https://github.com/opentable/nagios-mesos-service-check",
-    scripts=["check_mesos_service.py","check_mesos_service_status.py"],
+    scripts=["check_mesos_service.py"],
     license="Apache 2",
     install_requires=parse_requirements("requirements.txt"),
     include_package_data=True,
