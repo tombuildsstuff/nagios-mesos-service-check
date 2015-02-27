@@ -21,7 +21,7 @@ class MesosHealthCheck(nagiosplugin.Resource):
 
   @property
   def name(self):
-    return self.myname + self.endpoint + ' health'
+    return self.myname + ' ' + self.endpoint
 
   def probe(self):
     try:
