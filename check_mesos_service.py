@@ -45,7 +45,7 @@ def main():
                     help='The URL of the discovery server')
   argp.add_argument('-s', '--service', required=True,
                     help='The service name to check')
-  argp.add_argument('-e', '--endpoint', required=True,
+  argp.add_argument('-e', '--endpoint', default='/health',
                     help='The endpoint to check')
   argp.add_argument('-t', '--timeout', default=5,
                     help='Timeout')
