@@ -27,7 +27,7 @@ class MesosHealthCheck(nagiosplugin.Resource):
     try:
       endpoint_to_check = self.service_uri + self.endpoint
       log.debug('Checking %s', endpoint_to_check)
-      response = requests.get(endpoint_to_check, timeout=self.timeout)
+      response = requests.get(endpoint_to_check, timeout=float(self.timeout))
       if not response.status_code in [200, 204]:
         log.error('%s health %s: %s', self.metric_name, response.status_code, response.text)
         yield nagiosplugin.Metric(self.metric_name, UNHEALTHY)
