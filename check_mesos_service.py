@@ -4,27 +4,30 @@ import argparse
 import logging
 import re
 import requests
+from discovery_state import DiscoveryState
 
 log = logging.getLogger("nagiosplugin")
-
 INFINITY = float('inf')
 HEALTHY = 1
 UNHEALTHY = -1
-TOKEN = "server-token"
 
-class MesosService(nagiosplugin.Resource):
-  def __init__(self, name, service_uri, metric_name):
+class MesosHealthCheck(nagiosplugin.Resource):
+  def __init__(self, name, service_uri, endpoint, metric_name, timeout):
     self.myname = name
     self.service_uri = service_uri
+    self.endpoint = endpoint
     self.metric_name = metric_name
+    self.timeout = timeout
 
   @property
   def name(self):
-    return self.myname + ' health'
+    return self.myname + ' ' + self.endpoint
 
   def probe(self):
     try:
-      response = requests.get(self.service_uri + '/health', timeout=4)
+      endpoint_to_check = self.service_uri + self.endpoint
+      log.debug('Checking %s', endpoint_to_check)
+      response = requests.get(endpoint_to_check, timeout=self.timeout)
       if not response.status_code in [200, 204]:
         log.error('%s health %s: %s', self.metric_name, response.status_code, response.text)
         yield nagiosplugin.Metric(self.metric_name, UNHEALTHY)
@@ -35,34 +38,6 @@ class MesosService(nagiosplugin.Resource):
       log.error('%s health %s', self.metric_name, e)
       yield nagiosplugin.Metric(self.metric_name, UNHEALTHY)
 
-
-class DiscoveryState(nagiosplugin.Resource):
-  def __init__(self, name, announcements):
-    self.myname = name
-    self.announcements = announcements
-
-  @property
-  def name(self):
-    return self.myname + ' announcement'
-
-  def probe(self):
-    seen = set()
-    count = 0
-    for ann in self.announcements:
-      metadata = ann.get("metadata", dict())
-      if TOKEN in metadata:
-        token = metadata[TOKEN]
-        if token not in seen:
-          seen.add(token)
-          log.debug('New token %s' % token)
-          count += 1
-        else:
-          log.debug('Seen token %s' % token)
-      else:
-        log.debug('No token for service %s' % ann['announcementId'])
-        count += 1
-    yield nagiosplugin.Metric('announced services', count)
-
 @nagiosplugin.guarded
 def main():
   argp = argparse.ArgumentParser()
@@ -70,6 +45,10 @@ def main():
                     help='The URL of the discovery server')
   argp.add_argument('-s', '--service', required=True,
                     help='The service name to check')
+  argp.add_argument('-e', '--endpoint', default='/health',
+                    help='The endpoint to check')
+  argp.add_argument('-t', '--timeout', default=5,
+                    help='Timeout')
   argp.add_argument('-n', '--instances', default=1,
                     help='Minimum instances before critical')
   argp.add_argument('-w', '--warn', default=-1,
@@ -96,7 +75,7 @@ def main():
 
   for ann in announcements:
     name = 'service %s instance %s' % (ann['serviceType'], ann['serviceUri'])
-    check.add(MesosService(args.service, ann['serviceUri'], name),
+    check.add(MesosHealthCheck(args.service, ann['serviceUri'], args.endpoint, name, args.timeout),
               nagiosplugin.ScalarContext(name, unhealthy_range, unhealthy_range))
 
   check.main(verbose=args.verbose)
