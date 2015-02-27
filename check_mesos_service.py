@@ -47,7 +47,7 @@ def main():
                     help='The service name to check')
   argp.add_argument('-e', '--endpoint', required=True,
                     help='The endpoint to check')
-  argp.add_argument('-t', '--timeout', default=10,
+  argp.add_argument('-t', '--timeout', default=5,
                     help='Timeout')
   argp.add_argument('-n', '--instances', default=1,
                     help='Minimum instances before critical')
